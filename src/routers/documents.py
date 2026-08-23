@@ -1,16 +1,18 @@
+import logging
 import os
-import shutil
 import uuid
 
+import aiofiles
 from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
     HTTPException,
     UploadFile,
-    logger,
 )
 from fastapi.responses import Response
+
+logger = logging.getLogger(__name__)
 from kreuzberg import ExtractionConfig, extract_file
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
@@ -46,7 +48,7 @@ async def documents(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    # Currently only focusing on file, Later I will integrate URL that return accurate media type.
+    # TODO: Currently only focusing on file, Later I will integrate URL that return accurate media type.
     # if file and url:
     #     return Response(
     #         status_code=400, content="Either upload a valid format file or an url."
@@ -73,12 +75,18 @@ async def documents(
     )
 
     # We need to save the file. Background tasks can't continue with the file from UploadFile when the request life-cycle ends, because UploadFile is temporary.
-    with open(f"{file_path}", "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    async with aiofiles.open(f"{file_path}", "wb") as buffer:
+        await file.seek(0)
+        while chunk := await file.read(1024 * 1024):
+            await buffer.write(chunk)
+
+    content = await extract_content(file_path=file_path, mime_type=file.content_type)
+    # print(content)
 
     new_doc = Document(
         source_type="FILE",
         source_reference=file.filename,
+        content=content,
         status="QUEUED",
     )
 
@@ -86,8 +94,12 @@ async def documents(
     await db.commit()
     await db.refresh(new_doc)
 
+    os.remove(file_path)
+
     background_tasks.add_task(
-        doc_process_pipeline, file_path=file_path, doc_id=new_doc.id
+        doc_process_pipeline,
+        file_path=file_path,
+        doc_id=new_doc.id,
     )
     return new_doc
 
@@ -104,11 +116,10 @@ def is_file_valid_format(file_content_type: str):
 
 
 async def doc_process_pipeline(file_path: str, doc_id: int):
-    FILE_PATH = file_path
 
-    from src.database import AsyncSession
+    from src.database import async_session_maker
 
-    db = AsyncSession()
+    db = async_session_maker()
 
     stmt = (
         select(Document)
@@ -117,15 +128,11 @@ async def doc_process_pipeline(file_path: str, doc_id: int):
     )
     doc = await db.scalar(stmt)
 
-    content = await extract_content(file_path=FILE_PATH)
-
-    doc.content = content
-
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base", chunk_size=500, chunk_overlap=50
     )
 
-    splitted_chunks = text_splitter.split_text(content)
+    splitted_chunks = text_splitter.split_text(doc.content)
 
     # print(chunks[0])
     # print(chunks[1])
@@ -176,13 +183,12 @@ async def doc_process_pipeline(file_path: str, doc_id: int):
         raise
     finally:
         await db.aclose()
-        os.remove(file_path)
 
 
-async def extract_content(file_path: str):
+async def extract_content(file_path: str, mime_type: str | None = None):
     try:
         config = ExtractionConfig()
-        result = await extract_file(file_path, config=config)
+        result = await extract_file(file_path, mime_type=mime_type, config=config)
         return result.content
     except Exception as e:
         logger.error("extract_content failed for %s: %s", file_path, e)
@@ -194,8 +200,8 @@ class DocumentIDResponse(BaseModel):
     source_type: str
     source_reference: str
     status: str
-    total_token: int
-    estimated_cost: float
+    total_token: int | None
+    estimated_cost: float | None
 
 
 @router.get("/documents/{id}", response_model=DocumentIDResponse)

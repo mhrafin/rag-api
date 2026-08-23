@@ -9,7 +9,7 @@ settings = get_settings()
 # Synchronous drivers waits for every database round trip. We don't want that with FastAPI.
 async_engine = create_async_engine(settings.database_url)
 
-AsyncSession = async_sessionmaker(bind=async_engine)
+async_session_maker = async_sessionmaker(bind=async_engine)
 
 
 async def init_db():
@@ -19,13 +19,17 @@ async def init_db():
 
 
 async def get_db():
-    """A generator that creates a fresh session. Finally the session is closed after a request is handled.
+    """A generator that creates a fresh session. If exception happens, the session is rolled back. Finally the session is closed after a request is handled.
 
     Yields:
         AsyncSession: An async session
     """
-    db = AsyncSession()
-    try:
-        yield db
-    finally:
-        await db.aclose()
+    async with async_session_maker() as db:
+        try:
+            yield db
+            # await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+        finally:
+            await db.aclose()
