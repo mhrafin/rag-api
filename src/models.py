@@ -1,7 +1,6 @@
 import enum
 import uuid
 from datetime import datetime
-from typing import List
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -52,7 +51,7 @@ class Document(Base):
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
     # https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#one-to-many
-    chunks: Mapped[List["Chunk"]] = relationship(back_populates="document")
+    chunks: Mapped[list["Chunk"]] = relationship(back_populates="document")
     total_token: Mapped[int] = mapped_column(nullable=True)
     estimated_cost: Mapped[float] = mapped_column(nullable=True)
 
@@ -78,7 +77,7 @@ class Chunk(Base):
     content: Mapped[str]
     token_count: Mapped[int] = mapped_column(nullable=True)
     # https://github.com/pgvector/pgvector-python#sqlalchemy
-    embedding: Mapped[List[float]] = mapped_column(
+    embedding: Mapped[list[float]] = mapped_column(
         Vector(settings.embedding_dim), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -92,5 +91,5 @@ Index(
     Chunk.embedding,
     postgresql_using="hnsw",
     postgresql_with={"m": 16, "ef_construction": 64},
-    postgresql_ops={"embedding": "vector_l2_ops"},
+    postgresql_ops={"embedding": "vector_cosine_ops"},
 )
