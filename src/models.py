@@ -1,17 +1,22 @@
 import enum
 import uuid
 from datetime import datetime
+from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     TIMESTAMP,
+    DateTime,
     ForeignKey,
     Index,
+    Integer,
+    String,
     Text,
     UniqueConstraint,
     Uuid,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from .config import get_settings
@@ -70,8 +75,8 @@ class Chunk(Base):
     )
     document: Mapped["Document"] = relationship(back_populates="chunks")
     # Need a chunk_uuid to trace back to the chunk
-    chunk_uuid: Mapped[uuid.UUID] = mapped_column(
-        Uuid, unique=True, nullable=False, default=uuid.uuid4
+    chunk_uuid: Mapped[UUID] = mapped_column(
+        Uuid, unique=True, nullable=False, default=uuid4
     )
     chunk_index: Mapped[int]
     content: Mapped[str]
@@ -84,6 +89,29 @@ class Chunk(Base):
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
 
+
+class OutboxEvent(Base):
+    __tablename__ = "outbox_event"
+
+    # https://yasir323.hashnode.dev/transactional-outbox-pattern-python#the-write-side-in-code
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    aggregate_id: Mapped[str] = mapped_column(String)
+    type: Mapped[str]
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="pending")
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+Index("idx_id", OutboxEvent.id, postgresql_where=(OutboxEvent.status == "pending"))
+Index("idx_aggregate_id_type", OutboxEvent.aggregate_id, OutboxEvent.type)
 
 # https://github.com/pgvector/pgvector-python#sqlalchemy
 Index(
