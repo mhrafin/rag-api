@@ -221,8 +221,9 @@ __marimo__/
 
 .ignore
 .specify/
-.opencode/
+.opencode/*
 AGENTS.md
 specs/
 temp/
 secrets/
+openspec/*

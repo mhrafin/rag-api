@@ -1,1 +1,1 @@
-For extracting text i selected a package kreuzberg. Alternatives were Docling. Docling performs slow, it installed an whooping 91 packages. I don't such large dependancy for a single task.
+For extracting text i selected a package kreuzberg. Alternatives were Docling. Docling performs slow, it installed an whooping 91 packages. I don't need such large dependancy for a single task. There is also markitdown, which also could have been a great alternative. But I don't see any extra benefit on using markitdown.
