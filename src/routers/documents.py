@@ -98,7 +98,6 @@ async def documents(
 
     background_tasks.add_task(
         doc_process_pipeline,
-        file_path=file_path,
         doc_id=new_doc.id,
     )
     return new_doc
@@ -115,7 +114,7 @@ def is_file_valid_format(file_content_type: str):
     return True
 
 
-async def doc_process_pipeline(file_path: str, doc_id: int):
+async def doc_process_pipeline(doc_id: int):
 
     from src.database import async_session_maker
 
