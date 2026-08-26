@@ -24,7 +24,7 @@ from sqlalchemy.orm import selectinload
 
 from src.auth import verify_api_key
 from src.config import get_settings
-from src.database import get_db
+from src.database import get_session
 from src.models import Chunk, Document
 from src.utils.embeddings import embed_text
 from src.utils.tokens import get_token_count
@@ -46,7 +46,7 @@ class DocumentResponse(BaseModel):
 async def documents(
     file: UploadFile,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_session),
 ):
     # TODO: Currently only focusing on file, Later I will integrate URL that return accurate media type.
     # if file and url:
@@ -90,9 +90,9 @@ async def documents(
         status="QUEUED",
     )
 
-    db.add(new_doc)
-    await db.commit()
-    await db.refresh(new_doc)
+    session.add(new_doc)
+    await session.commit()
+    await session.refresh(new_doc)
 
     os.remove(file_path)
 
@@ -118,14 +118,14 @@ async def doc_process_pipeline(doc_id: int):
 
     from src.database import async_session_maker
 
-    db = async_session_maker()
+    session = async_session_maker()
 
     stmt = (
         select(Document)
         .where(Document.id == doc_id)
         .options(selectinload(Document.chunks))
     )
-    doc = await db.scalar(stmt)
+    doc = await session.scalar(stmt)
 
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base", chunk_size=500, chunk_overlap=50
@@ -150,7 +150,7 @@ async def doc_process_pipeline(doc_id: int):
                 token_count=token_count,
             )
 
-            db.add(new_chunk)
+            session.add(new_chunk)
 
         doc.total_token = doc_total_token
 
@@ -164,8 +164,8 @@ async def doc_process_pipeline(doc_id: int):
         doc.status = "CHUNKED"
 
         # db commit outside of the loop
-        await db.commit()
-        await db.refresh(doc)
+        await session.commit()
+        await session.refresh(doc)
 
         chunks = [c for c in doc.chunks if c.embedding is None]
         chunk_contents = [c.content for c in chunks]
@@ -174,14 +174,14 @@ async def doc_process_pipeline(doc_id: int):
             chunk.embedding = vector
 
         doc.status = "PROCESSED"
-        await db.commit()
+        await session.commit()
     except Exception:
-        await db.rollback()
+        await session.rollback()
         doc.status = "FAILED"
-        await db.commit()
+        await session.commit()
         raise
     finally:
-        await db.aclose()
+        await session.aclose()
 
 
 async def extract_content(file_path: str, mime_type: str | None = None):
@@ -204,7 +204,7 @@ class DocumentIDResponse(BaseModel):
 
 
 @router.get("/documents/{id}", response_model=DocumentIDResponse)
-async def documents_get(id: int, db: AsyncSession = Depends(get_db)):
+async def documents_get(id: int, db: AsyncSession = Depends(get_session)):
     stmt = select(Document).where(Document.id == id)
 
     result = await db.execute(stmt)

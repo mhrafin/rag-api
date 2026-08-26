@@ -18,18 +18,15 @@ async def init_db():
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
 
 
-async def get_db():
+async def get_session():
     """A generator that creates a fresh session. If exception happens, the session is rolled back. Finally the session is closed after a request is handled.
 
     Yields:
         AsyncSession: An async session
     """
-    async with async_session_maker() as db:
+    async with async_session_maker() as session:
         try:
-            yield db
-            # await db.commit()
+            yield session
         except Exception:
-            await db.rollback()
+            await session.rollback()
             raise
-        finally:
-            await db.aclose()

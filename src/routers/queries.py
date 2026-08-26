@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth import verify_api_key
 from src.config import get_settings
-from src.database import get_db
+from src.database import get_session
 from src.models import Chunk, Document
 from src.utils.embeddings import embed_text
 from src.utils.tokens import get_token_count
@@ -38,7 +38,7 @@ class QueryResponse(BaseModel):
 @router.post("/query")
 async def queries(
     query: QueryRequest,
-    db: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_session),
 ) -> QueryResponse:
     query_vectors = await embed_text(text=query.query, settings=settings)
 
@@ -59,7 +59,7 @@ async def queries(
         .limit(query.top_k)
     )
 
-    result = await db.execute(stmt)
+    result = await session.execute(stmt)
 
     rows = result.mappings().all()
 
