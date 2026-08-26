@@ -25,7 +25,7 @@ from sqlalchemy.orm import selectinload
 from src.auth import verify_api_key
 from src.config import get_settings
 from src.database import get_session
-from src.models import Chunk, Document
+from src.models import Chunk, Document, OutboxEvent
 from src.utils.embeddings import embed_text
 from src.utils.tokens import get_token_count
 
@@ -90,8 +90,14 @@ async def documents(
         status="QUEUED",
     )
 
-    session.add(new_doc)
-    await session.commit()
+    async with session.begin():
+        session.add(new_doc)
+
+        await session.flush()
+
+        event = OutboxEvent(aggregate_id=str(new_doc.id), type="document.created")
+        session.add(event)
+
     await session.refresh(new_doc)
 
     os.remove(file_path)
