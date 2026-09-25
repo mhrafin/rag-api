@@ -6,7 +6,7 @@ from src.config import get_settings
 
 settings = get_settings()
 
-HEADERS = {"X-API-Key": settings.api_key}
+HEADERS = {"X-Auth-Token": settings.auth_secret}
 
 
 def test_burst():

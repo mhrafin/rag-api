@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # The names here must match with the names from .env file. Names here are in lower case and in .env file they are in Upper case.
     database_url: str
-    api_key: str
+    auth_secret: str
     embedding_dim: int
     openai_api_key: str = ""
     temp_dir: str = "temp/"

@@ -3,12 +3,12 @@ from fastapi.security import APIKeyHeader
 
 from .config import get_settings
 
-x_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
+x_auth_token_header = APIKeyHeader(name="X-Auth-Token", auto_error=True)
 
 settings = get_settings()
 
 
-def verify_api_key(api_key: str = Depends(x_api_key_header)):
-    if api_key != settings.api_key:
-        raise HTTPException(status_code=403, detail="Invalid X-API-key Header")
-    return api_key
+def verify_auth_secret(x_auth_token: str = Depends(x_auth_token_header)):
+    if x_auth_token != settings.auth_secret:
+        raise HTTPException(status_code=403, detail="Invalid X-Auth-Token header")
+    return x_auth_token

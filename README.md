@@ -27,13 +27,13 @@ uv run fastapi dev
 
 ## Usage
 
-All endpoints require an `X-API-Key` header matching the `API_KEY` in your `.env`.
+All endpoints require an `X-Auth-Token` header matching the `AUTH_SECRET` in your `.env`.
 
 ### Upload a document
 
 ```bash
 curl -X POST http://localhost:8000/documents \
-  -H "X-API-Key: your-key" \
+  -H "X-Auth-Token: your-secret" \
   -F "file=@paper.pdf"
 ```
 
@@ -45,7 +45,7 @@ The server extracts text, splits it into chunks (500 tokens, 50-token overlap), 
 
 ```bash
 curl -X POST http://localhost:8000/query \
-  -H "X-API-Key: your-key" \
+  -H "X-Auth-Token: your-secret" \
   -H "Content-Type: application/json" \
   -d '{"query": "What transformer architecture does this paper propose?", "top_k": 10}'
 ```
@@ -56,7 +56,7 @@ Returns a response with inline citations (`[Ref 1]`, `[Ref 2]`) mapped to source
 
 ```bash
 curl -X GET http://localhost:8000/health \
-  -H "X-API-Key: your-key"
+  -H "X-Auth-Token: your-secret"
 ```
 
 ## Architecture

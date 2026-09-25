@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.auth import verify_api_key
+from src.auth import verify_auth_secret
 from src.config import get_settings
 from src.database import get_session
 from src.models import Chunk, Document, OutboxEvent
@@ -31,7 +31,7 @@ from src.utils.tokens import get_token_count
 
 settings = get_settings()
 
-router = APIRouter(dependencies=[Depends(verify_api_key)])
+router = APIRouter(dependencies=[Depends(verify_auth_secret)])
 
 
 class DocumentResponse(BaseModel):

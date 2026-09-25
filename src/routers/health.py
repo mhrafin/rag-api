@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth import verify_api_key
+from src.auth import verify_auth_secret
 from src.database import get_session
 
-router = APIRouter(dependencies=[Depends(verify_api_key)])
+router = APIRouter(dependencies=[Depends(verify_auth_secret)])
 
 
 @router.get("/health")

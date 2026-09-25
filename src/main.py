@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from src.middlewares import RateLimitMiddleware
 from src.routers import documents, health, queries
 
-from .auth import verify_api_key
+from .auth import verify_auth_secret
 from .database import init_db
 
 
@@ -32,5 +32,5 @@ app.add_middleware(RateLimitMiddleware)
 
 
 @app.get("/")
-async def root(key: str = Depends(verify_api_key)):
+async def root(key: str = Depends(verify_auth_secret)):
     return {"message": "Hello World"}
