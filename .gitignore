@@ -221,7 +221,6 @@ __marimo__/
 
 .specify/
 .opencode/*
-AGENTS.md
 specs/
 temp/
 secrets/
@@ -230,3 +229,5 @@ openspec/*
 _bmad/*
 _bmad-output/*
 .agents/*
+
+.structurizr/
