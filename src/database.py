@@ -19,7 +19,7 @@ async def init_db():
 
 
 async def get_session():
-    """A generator that creates a fresh session. If exception happens, the session is rolled back. Finally the session is closed after a request is handled.
+    """A generator that creates a fresh session. If exception happens, the session is rolled back.
 
     Yields:
         AsyncSession: An async session
