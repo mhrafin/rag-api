@@ -19,7 +19,7 @@ async def init_db():
 
 
 async def get_session():
-    """A generator that creates a fresh session. If exception happens, the session is rolled back.
+    """A generator that creates a fresh session. If exception happens, the session is rolled back else the session is committed.
 
     Yields:
         AsyncSession: An async session
@@ -30,3 +30,5 @@ async def get_session():
         except Exception:
             await session.rollback()
             raise
+        else:
+            await session.commit()
