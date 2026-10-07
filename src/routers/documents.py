@@ -90,13 +90,14 @@ async def documents(
         status="QUEUED",
     )
 
-    async with session.begin():
-        session.add(new_doc)
+    session.add(new_doc)
 
-        await session.flush()
+    await session.flush()
 
-        event = OutboxEvent(aggregate_id=str(new_doc.id), type="document.created")
-        session.add(event)
+    event = OutboxEvent(aggregate_id=str(new_doc.id), type="document.created")
+    session.add(event)
+
+    await session.commit()
 
     await session.refresh(new_doc)
 
