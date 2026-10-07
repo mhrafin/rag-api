@@ -5,7 +5,6 @@ import uuid
 import aiofiles
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
     UploadFile,
@@ -14,20 +13,14 @@ from fastapi.responses import Response
 
 logger = logging.getLogger(__name__)
 from kreuzberg import ExtractionConfig, extract_file
-from langchain_text_splitters import (
-    RecursiveCharacterTextSplitter,
-)
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from src.auth import verify_auth_secret
 from src.config import get_settings
 from src.database import get_session
-from src.models import Chunk, Document, OutboxEvent
-from src.utils.embeddings import embed_text
-from src.utils.tokens import get_token_count
+from src.models import Document, OutboxEvent
 
 settings = get_settings()
 
@@ -45,16 +38,8 @@ class DocumentResponse(BaseModel):
 @router.post("/documents", response_model=DocumentResponse)
 async def documents(
     file: UploadFile,
-    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ):
-    # TODO: Currently only focusing on file, Later I will integrate URL that return accurate media type.
-    # if file and url:
-    #     return Response(
-    #         status_code=400, content="Either upload a valid format file or an url."
-    #     )
-
-    # print(file.content_type)
 
     MAX_FILE_SIZE = 50 * 1024 * 1024
 
@@ -92,9 +77,10 @@ async def documents(
 
     session.add(new_doc)
 
+    # Need to flush to get the new doc id without writing to the db
     await session.flush()
 
-    event = OutboxEvent(aggregate_id=str(new_doc.id), type="document.created")
+    event = OutboxEvent(aggregate_id=new_doc.id, type="document.created")
     session.add(event)
 
     await session.commit()
@@ -103,10 +89,6 @@ async def documents(
 
     os.remove(file_path)
 
-    background_tasks.add_task(
-        doc_process_pipeline,
-        doc_id=new_doc.id,
-    )
     return new_doc
 
 
@@ -119,76 +101,6 @@ def is_file_valid_format(file_content_type: str):
 
     print("valid")
     return True
-
-
-async def doc_process_pipeline(doc_id: int):
-
-    from src.database import async_session_maker
-
-    session = async_session_maker()
-
-    stmt = (
-        select(Document)
-        .where(Document.id == doc_id)
-        .options(selectinload(Document.chunks))
-    )
-    doc = await session.scalar(stmt)
-
-    text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-        encoding_name="cl100k_base", chunk_size=500, chunk_overlap=50
-    )
-
-    splitted_chunks = text_splitter.split_text(doc.content)
-
-    # print(chunks[0])
-    # print(chunks[1])
-
-    doc_total_token = 0
-
-    try:
-        for index, chunk in enumerate(splitted_chunks):
-            token_count = get_token_count(chunk)
-            doc_total_token += token_count
-            new_chunk = Chunk(
-                document_id=doc.id,
-                chunk_uuid=uuid.uuid4(),
-                chunk_index=index + 1,
-                content=chunk,
-                token_count=token_count,
-            )
-
-            session.add(new_chunk)
-
-        doc.total_token = doc_total_token
-
-        # Add estimated cost of the total operation
-        current_est_cost_doc = 0.0 if doc.estimated_cost is None else doc.estimated_cost
-        new_est_cost_doc = (
-            (settings.cost_per_million / 1000000) * doc_total_token
-        ) + current_est_cost_doc
-        doc.estimated_cost = new_est_cost_doc
-
-        doc.status = "CHUNKED"
-
-        # db commit outside of the loop
-        await session.commit()
-        await session.refresh(doc)
-
-        chunks = [c for c in doc.chunks if c.embedding is None]
-        chunk_contents = [c.content for c in chunks]
-        vectors = await embed_text(chunk_contents, settings)
-        for vector, chunk in zip(vectors, chunks):
-            chunk.embedding = vector
-
-        doc.status = "PROCESSED"
-        await session.commit()
-    except Exception:
-        await session.rollback()
-        doc.status = "FAILED"
-        await session.commit()
-        raise
-    finally:
-        await session.aclose()
 
 
 async def extract_content(file_path: str, mime_type: str | None = None):

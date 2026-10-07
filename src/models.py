@@ -95,7 +95,7 @@ class OutboxEvent(Base):
 
     # https://yasir323.hashnode.dev/transactional-outbox-pattern-python#the-write-side-in-code
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    aggregate_id: Mapped[str] = mapped_column(String)
+    aggregate_id: Mapped[int] = mapped_column(Integer)
     type: Mapped[str]
     payload: Mapped[dict] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String, default="pending")
