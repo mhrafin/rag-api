@@ -12,7 +12,7 @@ from fastapi import (
 from fastapi.responses import Response
 
 logger = logging.getLogger(__name__)
-from kreuzberg import ExtractionConfig, extract_file
+from kreuzberg import ExtractionConfig, extract_file, validate_mime_type
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,17 +46,18 @@ async def documents(
     if file.size and file.size > MAX_FILE_SIZE:
         return Response(status_code=413, content="File too large")
 
-    if not is_file_valid_format(file_content_type=file.content_type):
+    normalized_mime = resolve_mime_type(file.content_type)
+    if normalized_mime is None:
         return Response(
             status_code=415,
-            content="Unsupported file format. Supported formats are: pdf, md, and txt.",
+            content=f"Unsupported file format: {file.content_type}",
         )
 
     os.makedirs(settings.temp_dir, exist_ok=True)
 
     # To stop traversal attacks
     file_path = (
-        settings.temp_dir + str(uuid.uuid4()) + "." + file.content_type.split("/")[-1]
+        settings.temp_dir + str(uuid.uuid4()) + "." + normalized_mime.split("/")[-1]
     )
 
     # We need to save the file. Background tasks can't continue with the file from UploadFile when the request life-cycle ends, because UploadFile is temporary.
@@ -65,7 +66,7 @@ async def documents(
         while chunk := await file.read(1024 * 1024):
             await buffer.write(chunk)
 
-    content = await extract_content(file_path=file_path, mime_type=file.content_type)
+    content = await extract_content(file_path=file_path, mime_type=normalized_mime)
     # print(content)
 
     new_doc = Document(
@@ -92,15 +93,19 @@ async def documents(
     return new_doc
 
 
-def is_file_valid_format(file_content_type: str):
-    valid_formats = ["application/pdf", "text/plain", "text/markdown"]
+def resolve_mime_type(raw_mime_type: str | None) -> str | None:
+    if not isinstance(raw_mime_type, str):
+        return None
 
-    if file_content_type not in valid_formats:
-        print("Invalid")
-        return False
+    cleaned = raw_mime_type.strip().split(";")[0].strip().lower()
+    if not cleaned:
+        return None
 
-    print("valid")
-    return True
+    try:
+        return validate_mime_type(cleaned)
+    except (RuntimeError, ValueError, TypeError):
+        logger.info("Unsupported file format: %r", raw_mime_type)
+        return None
 
 
 async def extract_content(file_path: str, mime_type: str | None = None):
