@@ -1,11 +1,12 @@
 import asyncio
 
+from src.config import get_settings
 from src.workers.worker import Worker
 
 
 async def main():
-
-    worker = Worker(poll_interval=5.0)
+    settings = get_settings()
+    worker = Worker(poll_interval=settings.worker_poll_interval)
 
     await worker.start()
 

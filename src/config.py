@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     temp_dir: str = "temp/"
     cost_per_million: float = 0.02
     max_context_string_token: int = 10000
+    worker_poll_interval: float = 5.0
 
 
 # First time calling this will create the settings instance. All the other call coming after it, will get the cached instance.
