@@ -34,15 +34,15 @@ Client → FastAPI (src/main.py) → Postgres + pgvector
 
 ## Tech stack
 
-| Layer | Choice |
-| --- | --- |
-| API | FastAPI 0.139, `asyncio` SQLAlchemy 2.0 |
-| DB / vectors | PostgreSQL 18 + `pgvector`, HNSW `vector_cosine_ops` |
-| Migrations | Alembic (`migrations/`) |
-| Extraction | Kreuzberg (`extract_file`, MIME validation) |
-| Chunking / tokens | LangChain text splitters, `tiktoken` |
-| Embeddings / chat | LangChain OpenAI: `text-embedding-3-small`, `gpt-5-nano` |
-| Packaging | `uv`, Docker, Docker Compose |
+| Layer             | Choice                                                  |
+| ----------------- | ------------------------------------------------------- |
+| API               | FastAPI 0.139,`asyncio` SQLAlchemy 2.0                  |
+| DB / vectors      | PostgreSQL 18 +`pgvector`, HNSW `vector_cosine_ops`     |
+| Migrations        | Alembic (`migrations/`)                                 |
+| Extraction        | Kreuzberg (`extract_file`, MIME validation)             |
+| Chunking / tokens | LangChain text splitters,`tiktoken`                     |
+| Embeddings / chat | LangChain OpenAI:`text-embedding-3-small`, `gpt-5-nano` |
+| Packaging         | `uv`, Docker, Docker Compose                            |
 
 ## Getting started
 
@@ -58,18 +58,18 @@ cp .env.example .env
 # then edit .env
 ```
 
-| Variable | Required | Default | Description |
-| --- | --- | --- | --- |
-| `AUTH_SECRET` | yes | — | Value clients must send as `X-Auth-Token` |
-| `DATABASE_URL` | yes | — | SQLAlchemy async URL, e.g. `postgresql+asyncpg://postgres:PASSWORD@127.0.0.1:5432/postgres_db` |
-| `OPENAI_API_KEY` | yes | — | Used for embeddings and chat |
-| `POSTGRES_PASSWORD` | yes (compose) | — | Compose `db` password |
-| `POSTGRES_DB` | no | `postgres_db` | Compose `db` name |
-| `EMBEDDING_DIM` | yes | `1536` | Must match `text-embedding-3-small` output |
-| `TEMP_DIR` | no | `temp/` | Temp upload location |
-| `COST_PER_MILLION` | no | `0.02` | Cost estimate per 1M tokens |
-| `MAX_CONTEXT_STRING_TOKEN` | no | `10000` | Max retrieved context tokens per query |
-| `WORKER_POLL_INTERVAL` | no | `5.0` | Worker outbox poll seconds |
+| Variable                   | Required      | Default       | Description                                                                                   |
+| -------------------------- | ------------- | ------------- | --------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`              | yes           | —             | Value clients must send as`X-Auth-Token`                                                      |
+| `DATABASE_URL`             | yes           | —             | SQLAlchemy async URL, e.g.`postgresql+asyncpg://postgres:PASSWORD@127.0.0.1:5432/postgres_db` |
+| `OPENAI_API_KEY`           | yes           | —             | Used for embeddings and chat                                                                  |
+| `POSTGRES_PASSWORD`        | yes (compose) | —             | Compose`db` password                                                                          |
+| `POSTGRES_DB`              | no            | `postgres_db` | Compose`db` name                                                                              |
+| `EMBEDDING_DIM`            | yes           | `1536`        | Must match`text-embedding-3-small` output                                                     |
+| `TEMP_DIR`                 | no            | `temp/`       | Temp upload location                                                                          |
+| `COST_PER_MILLION`         | no            | `0.02`        | Cost estimate per 1M tokens                                                                   |
+| `MAX_CONTEXT_STRING_TOKEN` | no            | `10000`       | Max retrieved context tokens per query                                                        |
+| `WORKER_POLL_INTERVAL`     | no            | `5.0`         | Worker outbox poll seconds                                                                    |
 
 See [.env.example](.env.example) and [docker-compose.yml](docker-compose.yml).
 
@@ -112,14 +112,14 @@ curl -H "X-Auth-Token: $AUTH_SECRET" http://localhost:8000/health
 
 All endpoints require `X-Auth-Token: <AUTH_SECRET>` except the auto-generated OpenAPI docs. Rate limit is 10 burst + 2/sec per IP (see `X-RateLimit-*` headers).
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/health` | DB liveness check |
-| `GET` | `/documents?limit=20&offset=0` | List documents |
-| `POST` | `/documents` | Upload file (`multipart/form-data`, ≤50 MB) |
-| `GET` | `/documents/{id}` | Get status, `total_token`, `estimated_cost` |
-| `DELETE` | `/documents/{id}` | Delete document + chunks (cascade) |
-| `POST` | `/query` | Ask the knowledge base |
+| Method   | Path                           | Description                                 |
+| -------- | ------------------------------ | ------------------------------------------- |
+| `GET`    | `/health`                      | DB liveness check                           |
+| `GET`    | `/documents?limit=20&offset=0` | List documents                              |
+| `POST`   | `/documents`                   | Upload file (`multipart/form-data`, ≤50 MB) |
+| `GET`    | `/documents/{id}`              | Get status,`total_token`, `estimated_cost`  |
+| `DELETE` | `/documents/{id}`              | Delete document + chunks (cascade)          |
+| `POST`   | `/query`                       | Ask the knowledge base                      |
 
 ### Upload a document
 
@@ -153,7 +153,12 @@ curl -X POST http://localhost:8000/query \
 {
   "response": "RAG combines a retriever [Ref 1] and a generator [Ref 2] ...",
   "references": [
-    {"reference": "[Ref 1]", "document_id": 1, "chunk_index": 3, "excerpt": "..."}
+    {
+      "reference": "[Ref 1]",
+      "document_id": 1,
+      "chunk_index": 3,
+      "excerpt": "..."
+    }
   ]
 }
 ```
@@ -228,7 +233,7 @@ alembic.ini
 
 ## Maintainers and contributing
 
-Maintained by [@mhrafin](https://github.com/mhrafin) ([rag-api-for-research](https://github.com/mhrafin/rag-api-for-research)).
+Maintained by [@mhrafin](https://github.com/mhrafin).
 
 Contributions are welcome:
 
