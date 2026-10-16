@@ -35,8 +35,18 @@ class DocumentResponse(BaseModel):
     status: str
 
 
+@router.get("/documents", response_model=list[DocumentResponse])
+async def list_documents(
+    limit: int = 20, offset: int = 0, session: AsyncSession = Depends(get_session)
+):
+    stmt = select(Document).offset(offset).limit(limit)
+    results = await session.execute(stmt)
+
+    return results.scalars()
+
+
 @router.post("/documents", response_model=DocumentResponse)
-async def documents(
+async def create_document(
     file: UploadFile,
     session: AsyncSession = Depends(get_session),
 ):
@@ -139,3 +149,19 @@ async def documents_get(id: int, db: AsyncSession = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Document not found")
 
     return doc
+
+
+@router.delete("/documents/{id}")
+async def delete_document(id: int, db: AsyncSession = Depends(get_session)):
+    stmt = select(Document).where(Document.id == id)
+
+    result = await db.execute(stmt)
+
+    doc = result.scalar()
+
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    await db.delete(doc)
+
+    return Response(None, status_code=204)
