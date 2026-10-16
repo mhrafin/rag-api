@@ -1,11 +1,11 @@
-# RAG API for Research
+# RAG API
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688.svg)](https://fastapi.tiangolo.com/)
 [![Postgres + pgvector](https://img.shields.io/badge/postgres-pgvector-336791.svg)](https://github.com/pgvector/pgvector)
 [![Docker Compose](https://img.shields.io/badge/docker-compose-ready-2496ED.svg)](docker-compose.yml)
 
-A vanilla Retrieval-Augmented Generation (RAG) API: upload research documents, have them chunked and embedded in the background, then ask questions over the whole knowledge base with inline citations.
+A vanilla Retrieval-Augmented Generation (RAG) API: upload documents, have them chunked and embedded in the background, then ask questions over the whole knowledge base with inline citations.
 
 > Upload once → poll document status → `POST /query` for an evidence-based LLM answer with `[Ref N]` citations and traceable excerpts.
 
@@ -228,7 +228,7 @@ alembic.ini
 ## Getting help
 
 - Start with the docs above and the inline `/docs` schema descriptions.
-- For bugs or feature requests, please [open a GitHub issue](https://github.com/mhrafin/rag-api-for-research/issues) with steps to reproduce, expected vs. actual behavior, and relevant logs (`docker compose logs app worker db`).
+- For bugs or feature requests, please [open a GitHub issue](https://github.com/mhrafin/rag-api/issues) with steps to reproduce, expected vs. actual behavior, and relevant logs (`docker compose logs app worker db`).
 - For local DB inspection, use Adminer at `http://localhost:8080` or connect directly to Postgres on `:5432`.
 
 ## Maintainers and contributing
