@@ -6,6 +6,9 @@ services:
       - AUTH_SECRET=${AUTH_SECRET}
       - EMBEDDING_DIM=${EMBEDDING_DIM}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TEMP_DIR=${TEMP_DIR:-temp/}
+      - COST_PER_MILLION=${COST_PER_MILLION:-0.02}
+      - MAX_CONTEXT_STRING_TOKEN=${MAX_CONTEXT_STRING_TOKEN:-10000}
     ports:
       - 8000:8000
     healthcheck:
@@ -17,6 +20,28 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: [ "uv", "run", "python", "-m", "src.worker_main" ]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres_db}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - EMBEDDING_DIM=${EMBEDDING_DIM}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TEMP_DIR=${TEMP_DIR:-temp/}
+      - COST_PER_MILLION=${COST_PER_MILLION:-0.02}
+      - MAX_CONTEXT_STRING_TOKEN=${MAX_CONTEXT_STRING_TOKEN:-10000}
+      - WORKER_POLL_INTERVAL=${WORKER_POLL_INTERVAL:-5.0}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
   migrate:
     build: .
@@ -27,8 +52,6 @@ services:
       - EMBEDDING_DIM=${EMBEDDING_DIM}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
-      app:
-        condition: service_healthy
       db:
         condition: service_healthy
   db:
